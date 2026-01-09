@@ -2,11 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- G-001 Mitigation: Added descriptive meta tag for SEO and context. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="An immersive, interactive map exploring 5 magical experiences in Manali, from the snowy lanes of Old Manali to the spiritual calm of Hidimba Temple.">
-    
-    <!-- B-002 Mitigation: Added a strict Content Security Policy to prevent XSS attacks. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self'; 
         script-src 'self' 'unsafe-inline' https://unpkg.com; 
@@ -18,234 +15,467 @@
 
     <title>Manali: A Soulful Journey</title>
     
-    <!-- B-001 Mitigation: Added SRI hash for CSS integrity. -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --charcoal-stone: #1d1d1f;
-            --snow-light: #F5F5F7;
-            --himalayan-gold: #D4AF37;
-            --glass-background: rgba(245, 245, 247, 0.75);
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --transition-speed: 0.6s;
-            --transition-curve: cubic-bezier(0.4, 0, 0.2, 1);
+            /* Palette: Midnight in the Himalayas */
+            --bg-deep: #0B0F19;
+            --text-primary: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --accent-gold: #FCD34D; /* Amber 300 */
+            --accent-glow: rgba(252, 211, 77, 0.4);
+
+            /* Glassmorphism - Dark Theme */
+            --glass-bg: rgba(11, 15, 25, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'Inter', sans-serif;
+
+            --transition-speed: 0.5s;
+            --transition-curve: cubic-bezier(0.16, 1, 0.3, 1); /* Ease Out Expoish */
         }
 
         html, body {
             margin: 0; padding: 0; height: 100%; width: 100%;
-            overflow: hidden; background-color: var(--charcoal-stone);
-            font-family: var(--font-family);
+            overflow: hidden; background-color: var(--bg-deep);
+            font-family: var(--font-body);
+            color: var(--text-primary);
             -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
         }
 
         #map {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
-            filter: saturate(0.8) brightness(1.1);
+            background: var(--bg-deep);
         }
 
-        #ui-container {
+        /* UI Container - Interaction Layer */
+        #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
-            pointer-events: none; display: flex; flex-direction: column;
-            justify-content: space-between; align-items: center; padding: 40px;
-            box-sizing: border-box;
+            pointer-events: none;
+            display: flex; flex-direction: column;
         }
 
-        #main-title {
-            color: var(--snow-light);
-            /* A-003 Mitigation: Using rem for scalable font size */
-            font-size: 1.25rem;
-            font-weight: 600; letter-spacing: 0.5px; text-align: center;
-            text-shadow: 0 2px 20px rgba(0,0,0,0.5); margin: 0; opacity: 0.9;
+        /* Header */
+        header {
+            padding: 24px;
+            text-align: center;
+            background: linear-gradient(to bottom, rgba(11,15,25,0.8) 0%, rgba(11,15,25,0) 100%);
+            pointer-events: none;
         }
 
+        h1 {
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 1.5rem;
+            margin: 0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            letter-spacing: 0.02em;
+        }
+
+        /* Start Button */
+        #start-btn {
+            position: absolute;
+            bottom: 40px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-primary);
+            color: var(--bg-deep);
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255,255,255,0.2);
+            transition: all 0.3s var(--transition-curve);
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        #start-btn:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255,255,255,0.3);
+        }
+        
+        body.has-active-story #start-btn {
+            opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(20px);
+        }
+
+        /* Story Card - Mobile (Bottom Sheet) */
         #story-card {
-            background: var(--glass-background); backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.3); color: var(--charcoal-stone);
-            width: 100%; max-width: 420px; padding: 32px; box-sizing: border-box;
-            pointer-events: auto; opacity: 0; transform: translateY(30px);
-            transition: opacity var(--transition-speed) var(--transition-curve), transform var(--transition-speed) var(--transition-curve);
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-top: 1px solid var(--glass-border);
+            border-radius: 24px 24px 0 0;
+            padding: 32px 24px 40px; /* Extra bottom padding for safe area */
+            box-shadow: var(--glass-shadow);
+            transform: translateY(110%); /* Hidden state */
+            transition: transform var(--transition-speed) var(--transition-curve);
+            pointer-events: auto;
+            max-height: 60vh;
+            overflow-y: auto;
         }
 
-        #story-card.visible { opacity: 1; transform: translateY(0); }
+        #story-card.visible {
+            transform: translateY(0);
+        }
+
+        .card-handle {
+            width: 40px; height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+
+        .story-content {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
         
-        /* A-003 Mitigation: Using rem for scalable font size */
-        #story-card h2 { font-size: 1.5rem; font-weight: 600; margin: 0 0 16px 0; line-height: 1.3; }
-        #story-card p { font-size: 1rem; font-weight: 300; line-height: 1.7; margin: 0; opacity: 0.9; }
+        .story-content.fade-out {
+            opacity: 0;
+        }
+
+        #story-card h2 {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            color: var(--text-primary);
+            margin: 0 0 12px 0;
+            line-height: 1.2;
+        }
+
+        #story-card p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0 0 24px 0;
+        }
+
+        /* Navigation Controls inside Card */
+        .card-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 16px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
         
-        #navigation { display: flex; gap: 16px; pointer-events: auto; margin-bottom: -15px; }
-        
-        /* A-001 Mitigation: Refactored from div to button for semantics and accessibility */
-        .nav-button {
-            width: 44px; height: 44px; background: var(--glass-background);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%;
-            cursor: pointer; display: flex; justify-content: center; align-items: center;
-            color: var(--charcoal-stone); font-size: 1rem; font-weight: 600;
+        .nav-btn:disabled {
+            opacity: 0.3; cursor: default;
+        }
+
+        .progress-dots {
+            display: flex; gap: 6px;
+        }
+
+        .dot {
+            width: 6px; height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
             transition: all 0.3s var(--transition-curve);
         }
-        
-        .nav-button:hover { transform: scale(1.1); background: rgba(255, 255, 255, 0.9); }
 
-        .nav-button.active {
-            background: var(--himalayan-gold); color: var(--charcoal-stone);
-            transform: scale(1.1); box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+        .dot.active {
+            background: var(--accent-gold);
+            transform: scale(1.5);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
-        
-        /* A-002 Mitigation: Added :focus-visible for clear keyboard focus indication */
-        *:focus-visible {
-            outline: 3px solid var(--himalayan-gold);
-            outline-offset: 2px;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+
+        /* Desktop Styles */
+        @media (min-width: 768px) {
+            #story-card {
+                position: absolute;
+                top: 40px; left: 40px; bottom: auto; right: auto;
+                width: 380px;
+                border-radius: 24px;
+                border: 1px solid var(--glass-border);
+                transform: translateX(-120%); /* Slide in from left */
+                padding: 32px;
+            }
+
+            #story-card.visible {
+                transform: translateX(0);
+            }
+
+            header {
+                position: absolute; top: 0; right: 0;
+                background: none; text-align: right;
+                padding: 40px;
+            }
+
+            h1 { font-size: 2rem; }
+
+            .card-handle { display: none; }
+
+            #start-btn {
+                bottom: 40px; left: 40px; transform: translateX(0);
+                width: auto;
+            }
+
+            #start-btn:hover {
+                 transform: translateY(-2px);
+            }
+
+            body.has-active-story #start-btn {
+                 transform: translateY(20px);
+            }
         }
-        #story-card:focus-visible { outline: none; box-shadow: 0 16px 48px rgba(0,0,0,0.3); } /* Don't outline the whole card */
-        
+
+        /* Map Markers */
         .custom-marker {
-            width: 18px; height: 18px; background: var(--snow-light);
-            border: 2px solid var(--charcoal-stone); border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: all 0.3s var(--transition-curve);
+            width: 12px; height: 12px;
+            background: var(--accent-gold);
+            border: 2px solid var(--bg-deep);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 var(--accent-glow);
+            transition: all 0.5s var(--transition-curve);
             cursor: pointer;
         }
-
-        .custom-marker:hover, .custom-marker:focus { transform: scale(1.3); }
+        
+        .custom-marker:hover {
+            transform: scale(1.5);
+        }
 
         .custom-marker.active {
-            background: var(--himalayan-gold); border-color: var(--snow-light);
-            transform: scale(1.5); box-shadow: 0 0 25px var(--himalayan-gold);
+            /* Fix: rely only on scale to avoid anchor shift */
+            background: var(--bg-deep);
+            border: 3px solid var(--accent-gold);
+            transform: scale(1.5);
+            box-shadow: 0 0 0 12px var(--accent-glow);
+            animation: pulse 2s infinite;
+            z-index: 1000 !important; /* Force on top */
         }
-        
-        /* A-001 Mitigation: Refactored from div to button */
-        #close-button {
-            position: absolute; top: 16px; right: 16px; width: 28px; height: 28px;
-            background: rgba(0,0,0,0.1); border-radius: 50%; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; border: none; padding: 0;
-            transition: background 0.2s;
-        }
-        
-        #close-button:hover { background: rgba(0,0,0,0.2); }
-        
-        #close-button::before, #close-button::after {
-            content: ''; position: absolute; width: 14px; height: 2px;
-            background-color: var(--charcoal-stone); opacity: 0.7;
-        }
-        #close-button::before { transform: rotate(45deg); }
-        #close-button::after { transform: rotate(-45deg); }
 
-        /* A-002 Mitigation: Class to hide content visually but keep for screen readers */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(252, 211, 77, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(252, 211, 77, 0); }
+        }
+
+        /* Accessibility */
+        *:focus-visible {
+            outline: 2px solid var(--accent-gold);
+            outline-offset: 4px;
+        }
+
+        /* Utils */
         .sr-only {
             position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
             overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
         }
+
+        /* Close Button (mostly for desktop if desired, but we have nav) */
+        .close-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: none; border: none; color: var(--text-secondary);
+            cursor: pointer; font-size: 1.5rem; line-height: 1;
+            padding: 4px; border-radius: 50%;
+            transition: color 0.2s;
+        }
+        .close-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+
     </style>
 </head>
 <body>
 
     <div id="map"></div>
     
-    <div id="ui-container">
-        <h1 id="main-title">5 Magical Experiences in Manali</h1>
-        
-        <div id="story-card" role="dialog" aria-modal="true" aria-labelledby="story-title">
-            <!-- A-001, A-002 Mitigation: div -> button, added type and aria-label -->
-            <button type="button" id="close-button" aria-label="Close story"></button>
-            <h2 id="story-title"></h2>
-            <p id="story-description"></p>
-        </div>
+    <div id="ui-layer">
+        <header>
+            <h1>Manali: A Soulful Journey</h1>
+        </header>
 
-        <div id="navigation"></div>
+        <button id="start-btn" onclick="showExperience(0)">Start the Journey</button>
+
+        <article id="story-card" aria-live="polite">
+            <button class="close-btn" aria-label="Close story" onclick="closeStory()">×</button>
+            <div class="card-handle"></div>
+
+            <div class="story-content" id="story-content-wrapper">
+                <h2 id="story-title">Experience Title</h2>
+                <p id="story-description">Description goes here...</p>
+            </div>
+
+            <div class="card-nav">
+                <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">
+                    <span>←</span> <span class="sr-only">Previous</span>
+                </button>
+
+                <div class="progress-dots" id="progress-dots">
+                    <!-- Dots generated by JS -->
+                </div>
+
+                <button class="nav-btn" id="next-btn" onclick="navigate(1)">
+                     <span class="sr-only">Next</span> <span>→</span>
+                </button>
+            </div>
+        </article>
     </div>
 
-    <!-- B-001 Mitigation: Added SRI hash for JS integrity -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script>
+        // Data
         const experiences = [
-            { title: "Waking to a Symphony of Snow in Old Manali", description: "Step outside your wooden cottage in the soft silence of dawn. The Himalayan peaks shimmer in the early light, draped in fresh snow. The only sounds are the crunch of snow beneath your boots and the distant murmur of the Beas River. It feels like the world has paused—just for you.", coords: [32.2513, 77.1843], zoom: 15 },
-            { title: "The Spellbinding Glow of Solang Valley", description: "As the sun begins its descent, Solang Valley transforms into a golden dreamscape. The white expanse reflects every changing hue—amber, rose, violet. You watch paragliders soar like birds in slow motion, silhouetted against the kaleidoscope of colors. A moment that demands nothing but stillness.", coords: [32.3218, 77.1587], zoom: 14 },
-            { title: "Whispering Forests of Hamta Pass Trail", description: "With every step into the pine-laced trails, the modern world dissolves. The forest speaks in rustles and hushes, sunlight filtering through tall trees like shards of gold. You pause to breathe it in—damp earth, mountain mist, the quiet thrill of discovery. Here, time forgets you.", coords: [32.2981, 77.2796], zoom: 13 },
-            { title: "Chai on a Rooftop in Vashisht", description: "Perched on a rooftop, cup of steaming masala chai warming your hands, you watch clouds dance over snow-dusted ridges. Backpackers share stories. The smell of cinnamon and woodsmoke fills the air. Every sip feels like a quiet celebration of life—untamed, serene, and real.", coords: [32.2571, 77.1883], zoom: 16 },
-            { title: "A Spiritual Pause at Hidimba Temple", description: "Tucked inside an ancient forest of towering deodars, the temple feels like a portal. Its wooden pagoda architecture rises unexpectedly from the mossy ground. You hear the wind sigh through the trees, mingling with a distant chant. A sacred quiet that grounds you.", coords: [32.2471, 77.1804], zoom: 17 }
+            { title: "Waking to a Symphony of Snow", description: "Step outside your wooden cottage in Old Manali. The Himalayan peaks shimmer in the early light, draped in fresh snow. The only sounds are the crunch of snow and the distant Beas River. It feels like the world has paused—just for you.", coords: [32.2513, 77.1843], zoom: 15 },
+            { title: "The Spellbinding Glow of Solang", description: "As the sun begins its descent, Solang Valley transforms into a golden dreamscape. The white expanse reflects amber and violet hues. You watch paragliders soar like birds in slow motion, silhouetted against the kaleidoscope. A moment that demands stillness.", coords: [32.3218, 77.1587], zoom: 14 },
+            { title: "Whispering Forests of Hamta", description: "With every step into the pine-laced trails, the modern world dissolves. The forest speaks in rustles and hushes, sunlight filtering through tall trees like shards of gold. You pause to breathe it in—damp earth, mountain mist, the quiet thrill of discovery.", coords: [32.2981, 77.2796], zoom: 13 },
+            { title: "Chai on a Rooftop in Vashisht", description: "Perched on a rooftop, cup of steaming masala chai warming your hands, you watch clouds dance over snow-dusted ridges. The smell of cinnamon and woodsmoke fills the air. Every sip feels like a quiet celebration of life—untamed, serene, and real.", coords: [32.2571, 77.1883], zoom: 16 },
+            { title: "Spiritual Pause at Hidimba Temple", description: "Tucked inside an ancient forest of towering deodars, the temple feels like a portal. Its wooden pagoda architecture rises from the mossy ground. You hear the wind sigh through the trees, mingling with a distant chant. A sacred quiet that grounds you.", coords: [32.2471, 77.1804], zoom: 17 }
         ];
 
-        // P-001 Mitigation (Conceptual): In a true mission-critical app, Leaflet and other assets would be self-hosted, not on a CDN, to eliminate this Single Point of Failure. For this exercise, we rely on SRI.
+        // Map Init
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([32.28, 77.18], 12);
 
-        // B-003 Mitigation: Using HTTPS for tile layer to prevent mixed content warnings.
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+        // CartoDB Dark Matter
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd'
+        }).addTo(map);
 
-        const storyCard = document.getElementById('story-card');
-        const storyTitle = document.getElementById('story-title');
-        const storyDescription = document.getElementById('story-description');
-        const navigation = document.getElementById('navigation');
-        const closeButton = document.getElementById('close-button');
-
+        // State
+        let currentIndex = -1;
         let markers = [];
-        let navButtons = [];
 
-        const showExperience = (index) => {
-            if (index === undefined || !experiences[index]) return;
-            const experience = experiences[index];
-            
-            // UX-002 Mitigation: map.flyTo gracefully handles being called again mid-flight, so no extra logic is strictly needed, but in a more complex app, we would add logic to stop the previous animation.
-            map.flyTo(experience.coords, experience.zoom, { animate: true, duration: 2.0, easeLinearity: 0.25 });
+        // DOM Elements
+        const storyCard = document.getElementById('story-card');
+        const titleEl = document.getElementById('story-title');
+        const descEl = document.getElementById('story-description');
+        const dotsContainer = document.getElementById('progress-dots');
+        const contentWrapper = document.getElementById('story-content-wrapper');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
 
-            storyTitle.textContent = experience.title;
-            storyDescription.textContent = experience.description;
-            storyCard.classList.add('visible');
-
-            markers.forEach((m, i) => m.getElement().classList.toggle('active', i === index));
-            navButtons.forEach((b, i) => b.classList.toggle('active', i === index));
-        };
-        
-        const hideExperience = () => {
-            storyCard.classList.remove('visible');
-            markers.forEach(m => m.getElement().classList.remove('active'));
-            navButtons.forEach(b => b.classList.remove('active'));
-        };
-
-        experiences.forEach((exp, index) => {
-            // A-002 Mitigation: Added screen-reader-only text inside the marker.
-            const iconHtml = `<span class="sr-only">${exp.title}</span>`;
-            const customIcon = L.divIcon({ className: 'custom-marker', html: iconHtml, iconSize: [18, 18], iconAnchor: [9, 9] });
-
-            const marker = L.marker(exp.coords, { icon: customIcon }).addTo(map);
-            
-            // A-002 Mitigation: Making the marker element itself accessible.
-            const markerEl = marker.getElement();
-            markerEl.setAttribute('role', 'button');
-            markerEl.setAttribute('tabindex', '0');
-            
-            marker.on('click', () => showExperience(index));
-            // A-002 Mitigation: Allow activation via Enter/Space for keyboard users.
-            marker.on('keydown', (e) => {
-                if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') {
-                    showExperience(index);
-                }
+        // Init UI
+        experiences.forEach((exp, i) => {
+            // Markers
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<span class="sr-only">${exp.title}</span>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
             });
+            
+            const marker = L.marker(exp.coords, { icon: icon }).addTo(map);
+            marker.on('click', () => showExperience(i));
+
+            // Keyboard Access
+            const el = marker.getElement();
+            el.tabIndex = 0;
+            el.role = "button";
+            el.ariaLabel = exp.title;
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') showExperience(i);
+            });
+
             markers.push(marker);
 
-            // A-001 Mitigation: Using <button> element instead of div.
-            const navButton = document.createElement('button');
-            navButton.type = 'button';
-            navButton.className = 'nav-button';
-            navButton.textContent = index + 1;
-            // A-002 Mitigation: Adding an aria-label for more context.
-            navButton.setAttribute('aria-label', `View experience ${index + 1}: ${exp.title}`);
-            navButton.onclick = () => showExperience(index);
-            navigation.appendChild(navButton);
-            navButtons.push(navButton);
+            // Dots
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dotsContainer.appendChild(dot);
         });
+
+        function updateNavState() {
+            prevBtn.disabled = currentIndex <= 0;
+            nextBtn.disabled = currentIndex >= experiences.length - 1;
+            
+            // Update dots
+            Array.from(dotsContainer.children).forEach((dot, i) => {
+                dot.classList.toggle('active', i === currentIndex);
+            });
+        }
+
+        function showExperience(index) {
+            if (index < 0 || index >= experiences.length) return;
+            
+            document.body.classList.add('has-active-story');
+
+            const isFirstLoad = currentIndex === -1;
+            currentIndex = index;
+            const exp = experiences[index];
+
+            // 1. Map Move
+            map.flyTo(exp.coords, exp.zoom, {
+                animate: true,
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+
+            // 2. Content Transition
+            if (!isFirstLoad && storyCard.classList.contains('visible')) {
+                contentWrapper.classList.add('fade-out');
+                setTimeout(() => {
+                    updateContent(exp);
+                    contentWrapper.classList.remove('fade-out');
+                }, 300);
+            } else {
+                updateContent(exp);
+                storyCard.classList.add('visible');
+            }
+
+            // 3. Highlight Marker
+            markers.forEach((m, i) => {
+                const el = m.getElement();
+                if (i === index) {
+                    el.classList.add('active');
+                    m.setZIndexOffset(1000);
+                } else {
+                    el.classList.remove('active');
+                    m.setZIndexOffset(0);
+                }
+            });
+
+            updateNavState();
+        }
+
+        function updateContent(exp) {
+            titleEl.textContent = exp.title;
+            descEl.textContent = exp.description;
+        }
+
+        function navigate(dir) {
+            showExperience(currentIndex + dir);
+        }
         
-        closeButton.addEventListener('click', hideExperience);
+        function closeStory() {
+            document.body.classList.remove('has-active-story');
+            storyCard.classList.remove('visible');
+            currentIndex = -1;
+            markers.forEach((m) => {
+                m.getElement().classList.remove('active');
+                m.setZIndexOffset(0);
+            });
+            map.flyTo([32.28, 77.18], 12, { duration: 1.5 });
+        }
         
-        // UX-001 Mitigation: The aggressive map-wide click listener has been removed.
-        
-        storyCard.addEventListener('click', (e) => e.stopPropagation());
+        // Initial "Intro" View could be added here,
+        // but for now we let the user explore or click a marker.
+        // Optionally, start with the first one open?
+        // showExperience(0);
     </script>
 </body>
 </html>
