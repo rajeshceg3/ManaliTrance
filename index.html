@@ -534,6 +534,157 @@
             position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
             overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
         }
+
+        /* --- New Enrichment Styles --- */
+
+        .story-card-hero {
+            display: block;
+            width: calc(100% + 48px);
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+            margin: -32px -24px 24px -24px;
+            border-radius: 32px 32px 0 0;
+            mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+            background-color: #1a1a1a; /* Placeholder color */
+            transition: background-image 0.5s ease;
+        }
+
+        .meta-row {
+            display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;
+            font-size: 0.75rem; color: var(--accent-gold);
+            font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .meta-item { display: flex; align-items: center; gap: 6px; }
+
+        .pro-tip {
+            background: rgba(229, 192, 123, 0.08);
+            border-left: 2px solid var(--accent-gold);
+            padding: 16px 20px;
+            margin-top: 32px;
+            border-radius: 0 12px 12px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            line-height: 1.6;
+        }
+
+        .pro-tip strong { color: var(--accent-gold-light); font-style: normal; margin-right: 6px; }
+
+        /* Map Controls */
+        .map-controls {
+            position: absolute; bottom: max(32px, env(safe-area-inset-bottom) + 32px); right: 24px;
+            display: flex; flex-direction: column; gap: 12px;
+            z-index: 1000;
+        }
+
+        .control-btn, .about-btn {
+            width: 48px; height: 48px;
+            background: rgba(5, 5, 7, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 14px;
+            color: var(--text-primary);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            pointer-events: auto;
+        }
+
+        .control-btn:hover, .about-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active, .about-btn:active { transform: scale(0.95); }
+
+        /* About Button Position */
+        .about-btn {
+            position: absolute; top: 32px; left: 24px;
+            z-index: 1000;
+        }
+
+        /* About Modal */
+        .about-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .about-modal[aria-hidden="false"] {
+            opacity: 1; pointer-events: auto;
+        }
+
+        .modal-content {
+            background: rgba(10, 10, 15, 0.9);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            border-radius: 24px;
+            max-width: 460px; width: 85%;
+            text-align: center;
+            position: relative;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.5s var(--ease-out-expo);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+
+        .about-modal[aria-hidden="false"] .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-content h2 {
+            font-family: var(--font-heading);
+            color: var(--accent-gold);
+            font-size: 2rem;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+
+        .modal-content p {
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .close-modal {
+            position: absolute; top: 16px; right: 16px;
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; padding: 8px;
+            transition: color 0.3s ease;
+            display: flex;
+        }
+        .close-modal:hover { color: #fff; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .story-card-hero { height: 180px; }
+            .map-controls { bottom: max(100px, env(safe-area-inset-bottom) + 100px); }
+
+            /* Adjust header to not overlap with button */
+            header { padding-top: 80px; }
+
+            /* Move start button up slightly to clear bottom controls if needed, but controls are right-aligned */
+        }
+
+        @media (min-width: 1024px) {
+            .story-card-hero {
+                border-radius: 24px 24px 0 0;
+                margin: -72px -64px 32px -64px;
+                width: calc(100% + 128px);
+                height: 260px;
+            }
+            .about-btn { top: 40px; left: 40px; width: 56px; height: 56px; }
+            .map-controls { right: 40px; bottom: 40px; }
+        }
     </style>
 </head>
 <body>
@@ -547,15 +698,56 @@
 
         <button id="start-btn" onclick="showExperience(0)">Start the Journey</button>
 
+        <div class="map-controls">
+            <button class="control-btn" onclick="map.zoomIn()" aria-label="Zoom In">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <button class="control-btn" onclick="map.zoomOut()" aria-label="Zoom Out">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/></svg>
+            </button>
+            <button class="control-btn" onclick="resetMap()" aria-label="Reset Map">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
+
+        <button class="about-btn" onclick="toggleAbout()" aria-label="About">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        </button>
+
+        <div id="about-modal" class="about-modal" aria-hidden="true">
+            <div class="modal-content">
+                <button class="close-modal" onclick="toggleAbout()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <h2>About Manali Trance</h2>
+                <p>An interactive tribute to the soul of the Himalayas. Explore the hidden gems, quiet corners, and golden moments of Manali.</p>
+                <p style="margin-top: 16px; font-size: 0.85rem; color: var(--text-muted);">Curated with love. <br>Images from Unsplash.</p>
+            </div>
+        </div>
+
         <article id="story-card" aria-live="polite">
             <button class="close-btn" aria-label="Close story" onclick="closeStory()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
             <div class="card-handle"></div>
 
+            <div id="story-hero-img" class="story-card-hero" role="img" aria-label="Story Image"></div>
+
             <div class="story-content" id="story-content-wrapper">
+                <div class="meta-row">
+                    <span class="meta-item" id="meta-category"></span>
+                    <span class="meta-item" id="meta-time">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        <span id="story-time"></span>
+                    </span>
+                </div>
+
                 <h2 id="story-title">Experience Title</h2>
                 <p id="story-description">Description goes here...</p>
+
+                <div class="pro-tip">
+                    <strong>Pro Tip:</strong> <span id="story-tip"></span>
+                </div>
             </div>
 
             <div class="card-nav">
@@ -577,11 +769,56 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script>
         const experiences = [
-            { title: "Symphony of Snow", description: "Step outside your wooden cottage in Old Manali. The Himalayan peaks shimmer in the early light, draped in fresh snow. The only sounds are the crunch of snow and the distant Beas River. It feels like the world has paused—just for you.", coords: [32.2513, 77.1843], zoom: 15 },
-            { title: "Golden Solang", description: "As the sun begins its descent, Solang Valley transforms into a golden dreamscape. The white expanse reflects amber and violet hues. You watch paragliders soar like birds in slow motion, silhouetted against the kaleidoscope. A moment that demands stillness.", coords: [32.3218, 77.1587], zoom: 14 },
-            { title: "Whispering Hamta", description: "With every step into the pine-laced trails, the modern world dissolves. The forest speaks in rustles and hushes, sunlight filtering through tall trees like shards of gold. You pause to breathe it in—damp earth, mountain mist, the quiet thrill of discovery.", coords: [32.2981, 77.2796], zoom: 13 },
-            { title: "Rooftop Chai", description: "Perched on a rooftop in Vashisht, cup of steaming masala chai warming your hands, you watch clouds dance over snow-dusted ridges. The smell of cinnamon and woodsmoke fills the air. Every sip feels like a quiet celebration of life.", coords: [32.2571, 77.1883], zoom: 16 },
-            { title: "Sacred Silence", description: "Tucked inside an ancient forest of towering deodars, Hidimba Temple feels like a portal. Its wooden pagoda architecture rises from the mossy ground. You hear the wind sigh through the trees, mingling with a distant chant. A sacred quiet that grounds you.", coords: [32.2471, 77.1804], zoom: 17 }
+            {
+                title: "Symphony of Snow",
+                description: "Step outside your wooden cottage in Old Manali. The Himalayan peaks shimmer in the early light, draped in fresh snow. The only sounds are the crunch of snow and the distant Beas River. It feels like the world has paused—just for you.",
+                coords: [32.2513, 77.1843],
+                zoom: 15,
+                image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80",
+                tips: "Wear layers; mornings are freezing.",
+                bestTime: "Sunrise (6:00 AM)",
+                category: "Nature"
+            },
+            {
+                title: "Golden Solang",
+                description: "As the sun begins its descent, Solang Valley transforms into a golden dreamscape. The white expanse reflects amber and violet hues. You watch paragliders soar like birds in slow motion, silhouetted against the kaleidoscope. A moment that demands stillness.",
+                coords: [32.3218, 77.1587],
+                zoom: 14,
+                image: "https://images.unsplash.com/photo-1504280390367-361c6d9e6342?auto=format&fit=crop&w=800&q=80",
+                tips: "Book paragliding in advance to skip queues.",
+                bestTime: "Sunset (5:30 PM)",
+                category: "Adventure"
+            },
+            {
+                title: "Whispering Hamta",
+                description: "With every step into the pine-laced trails, the modern world dissolves. The forest speaks in rustles and hushes, sunlight filtering through tall trees like shards of gold. You pause to breathe it in—damp earth, mountain mist, the quiet thrill of discovery.",
+                coords: [32.2981, 77.2796],
+                zoom: 13,
+                image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80",
+                tips: "Carry water and sturdy shoes.",
+                bestTime: "Afternoon (2:00 PM)",
+                category: "Nature"
+            },
+            {
+                title: "Rooftop Chai",
+                description: "Perched on a rooftop in Vashisht, cup of steaming masala chai warming your hands, you watch clouds dance over snow-dusted ridges. The smell of cinnamon and woodsmoke fills the air. Every sip feels like a quiet celebration of life.",
+                coords: [32.2571, 77.1883],
+                zoom: 16,
+                image: "https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=800&q=80",
+                tips: "Try the local honey ginger lemon tea.",
+                bestTime: "Evening (4:00 PM)",
+                category: "Relaxation"
+            },
+            {
+                title: "Sacred Silence",
+                description: "Tucked inside an ancient forest of towering deodars, Hidimba Temple feels like a portal. Its wooden pagoda architecture rises from the mossy ground. You hear the wind sigh through the trees, mingling with a distant chant. A sacred quiet that grounds you.",
+                coords: [32.2471, 77.1804],
+                zoom: 17,
+                image: "https://images.unsplash.com/photo-1599420186946-7b6fb4e297f0?auto=format&fit=crop&w=800&q=80",
+                tips: "Respect the silence; it’s a living temple.",
+                bestTime: "Early Morning (7:00 AM)",
+                category: "Culture"
+            }
         ];
 
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([32.28, 77.18], 12);
@@ -602,7 +839,23 @@
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
 
-        // Initialize Markers and Dots
+        // New Elements
+        const heroImg = document.getElementById('story-hero-img');
+        const metaCategory = document.getElementById('meta-category');
+        const metaTime = document.getElementById('story-time');
+        const metaTip = document.getElementById('story-tip');
+        const aboutModal = document.getElementById('about-modal');
+
+        // Initialize Markers, Dots, and Polyline
+        const routeCoords = experiences.map(exp => exp.coords);
+        const routeLine = L.polyline(routeCoords, {
+            color: '#E5C07B',
+            dashArray: '8, 16',
+            weight: 2,
+            opacity: 0.4,
+            lineCap: 'round'
+        }).addTo(map);
+
         experiences.forEach((exp, i) => {
             const icon = L.divIcon({
                 className: 'custom-marker',
@@ -683,6 +936,14 @@
         function updateContent(exp) {
             titleEl.textContent = exp.title;
             descEl.textContent = exp.description;
+
+            // New Content
+            metaCategory.textContent = exp.category;
+            metaTime.textContent = exp.bestTime;
+            metaTip.textContent = exp.tips;
+
+            // Handle Image
+            heroImg.style.backgroundImage = `url('${exp.image}')`;
         }
 
         function navigate(dir) {
@@ -699,6 +960,22 @@
             });
             map.flyTo([32.28, 77.18], 12, { duration: 1.5 });
         }
+
+        // --- New Logic: Controls & Modal ---
+
+        function resetMap() {
+            closeStory();
+        }
+
+        function toggleAbout() {
+            const isHidden = aboutModal.getAttribute('aria-hidden') === 'true';
+            aboutModal.setAttribute('aria-hidden', !isHidden);
+        }
+
+        // Close modal on outside click
+        aboutModal.addEventListener('click', (e) => {
+            if (e.target === aboutModal) toggleAbout();
+        });
 
         // --- Swipe Gestures for Mobile ---
         let touchStartX = 0;
