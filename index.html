@@ -881,6 +881,175 @@
         @media (min-width: 1024px) {
             #weather-widget { top: 40px; right: 40px; }
         }
+
+        /* --- Guided Tour Styles (Ultrathink) --- */
+        body.tour-mode #filter-container,
+        body.tour-mode #weather-widget,
+        body.tour-mode .map-controls,
+        body.tour-mode .about-btn,
+        body.tour-mode header,
+        body.tour-mode #start-btn {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s var(--ease-out-expo);
+        }
+
+        /* Minimized Story Card for Progressive Disclosure */
+        #story-card.minimized {
+            transform: translateY(calc(100% - 140px));
+            cursor: pointer;
+            padding-top: 0;
+            border-radius: 24px 24px 0 0;
+        }
+
+        #story-card.minimized:hover {
+            transform: translateY(calc(100% - 150px));
+        }
+
+        #story-card.minimized .story-content,
+        #story-card.minimized .card-nav,
+        #story-card.minimized .close-btn {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #story-card.minimized .story-card-hero {
+            height: 140px;
+            margin: 0;
+            width: 100%;
+            border-radius: 24px 24px 0 0;
+            mask-image: none;
+            -webkit-mask-image: none;
+        }
+
+        /* Tour Teaser Overlay */
+        .tour-teaser-content {
+            position: absolute;
+            bottom: 30px; left: 24px; right: 24px;
+            z-index: 10;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s var(--ease-out-expo) 0.2s;
+            pointer-events: none;
+        }
+
+        #story-card.minimized .tour-teaser-content {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .tour-teaser-title {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            margin: 0 0 8px 0;
+            color: var(--text-primary);
+            text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+        }
+
+        .tour-expand-btn {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--accent-gold);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(229, 192, 123, 0.3);
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .tour-expand-btn:hover {
+            background: var(--accent-gold);
+            color: #000;
+        }
+
+        /* Active Route Animation */
+        .active-route-line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawLine 2s linear forwards;
+            filter: drop-shadow(0 0 8px var(--accent-gold));
+        }
+
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Tour Progress Indicator */
+        #tour-progress {
+            position: absolute;
+            top: 32px; left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(5, 5, 7, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 24px;
+            border-radius: 20px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            z-index: 100;
+            transition: transform 0.6s var(--ease-spring);
+        }
+
+        body.tour-mode #tour-progress {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Tour Specific Button */
+        #tour-continue-btn {
+            width: 100%;
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--accent-gold);
+            color: #050507;
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        #tour-continue-btn:hover {
+            background: var(--accent-gold-light);
+            box-shadow: 0 10px 30px rgba(229, 192, 123, 0.3);
+            transform: translateY(-2px);
+        }
+
+        body.tour-mode #tour-continue-btn {
+            display: block;
+        }
+
+        /* Desktop Adjustments for Minimized Card */
+        @media (min-width: 1024px) {
+            #story-card.minimized {
+                transform: translateY(-50%) translateX(-20px) scale(0.9);
+                width: 380px;
+                height: 200px;
+                padding: 0;
+                bottom: 40px; top: auto; left: 40px;
+                border-radius: 24px;
+            }
+
+            #story-card.minimized:hover {
+                 transform: translateY(-50%) translateX(0) scale(0.95);
+            }
+
+            #story-card.minimized .story-card-hero {
+                 height: 100%;
+                 width: 100%;
+                 margin: 0;
+                 border-radius: 24px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -901,7 +1070,8 @@
             <button class="filter-chip" onclick="filterMarkers('Relaxation')">Relaxation</button>
         </div>
 
-        <button id="start-btn" onclick="showExperience(0)">Start the Journey</button>
+        <div id="tour-progress"></div>
+        <button id="start-btn" onclick="startGuidedTour()">Start Guided Tour</button>
 
         <div id="weather-widget">
             <div class="weather-icon">
@@ -954,6 +1124,12 @@
 
             <div id="story-hero-img" class="story-card-hero" role="img" aria-label="Story Image"></div>
 
+            <!-- Tour Teaser (Visible when minimized) -->
+            <div class="tour-teaser-content">
+                <h3 class="tour-teaser-title" id="tour-teaser-title">Title Here</h3>
+                <button class="tour-expand-btn" onclick="revealStory()">Expand</button>
+            </div>
+
             <div class="story-content" id="story-content-wrapper">
                 <div class="meta-row">
                     <span class="meta-item" id="meta-category"></span>
@@ -1001,6 +1177,8 @@
                         </div>
                     </div>
                 </div>
+
+                <button id="tour-continue-btn" onclick="nextTourStop()">Continue Journey</button>
             </div>
 
             <div class="card-nav">
@@ -1270,6 +1448,12 @@
         function showExperience(index) {
             if (index < 0 || index >= experiences.length) return;
             
+            // If in tour mode, use tour logic
+            if (isTourMode) {
+                goToTourStop(index);
+                return;
+            }
+
             document.body.classList.add('has-active-story');
             const isFirstLoad = currentIndex === -1;
             currentIndex = index;
@@ -1341,8 +1525,20 @@
         }
         
         function closeStory() {
+            if (isTourMode) {
+                // In tour mode, close button exits the tour or minimizes
+                // Let's make it exit tour for clarity, or minimize if expanded
+                if (!storyCard.classList.contains('minimized')) {
+                    storyCard.classList.add('minimized');
+                    return;
+                }
+                endTour();
+                return;
+            }
+
             document.body.classList.remove('has-active-story');
             storyCard.classList.remove('visible');
+            storyCard.classList.remove('minimized');
             currentIndex = -1;
             markers.forEach((m) => {
                 m.getElement().classList.remove('active');
@@ -1608,6 +1804,113 @@
                 }
             }
         });
+
+        // --- Guided Tour Logic ---
+        let isTourMode = false;
+        let tourPolyline = null;
+
+        function startGuidedTour() {
+            isTourMode = true;
+            document.body.classList.add('tour-mode');
+
+            // Reset state
+            if (journeyPolyline) map.removeLayer(journeyPolyline);
+            if (routeLine) map.removeLayer(routeLine); // Hide global route
+
+            // Start at 0
+            goToTourStop(0);
+        }
+
+        function goToTourStop(index) {
+            if (index >= experiences.length) {
+                endTour();
+                return;
+            }
+
+            currentIndex = index;
+
+            // Update Progress
+            const progressEl = document.getElementById('tour-progress');
+            if (progressEl) progressEl.textContent = `Stop ${index + 1} of ${experiences.length}`;
+
+            // Minimize first
+            storyCard.classList.add('minimized');
+            storyCard.classList.remove('visible');
+
+            // Update Teaser
+            const teaserTitle = document.getElementById('tour-teaser-title');
+            if (teaserTitle) teaserTitle.textContent = experiences[index].title;
+
+            // Update Content
+            updateContent(experiences[index], index);
+
+            // Fly to location (Slower pan for tour feel)
+            const exp = experiences[index];
+            map.flyTo(exp.coords, exp.zoom, {
+                animate: true,
+                duration: 2.5,
+                easeLinearity: 0.1
+            });
+
+            // Animate Route
+            if (index > 0) {
+                animateRoute(experiences[index-1].coords, exp.coords);
+            } else {
+                if (tourPolyline) map.removeLayer(tourPolyline);
+            }
+
+            // Highlight marker
+            markers.forEach((m, i) => {
+                const el = m.getElement();
+                if (i === index) {
+                    el.classList.add('active');
+                    m.setZIndexOffset(1000);
+                } else {
+                    el.classList.remove('active');
+                    m.setZIndexOffset(0);
+                }
+            });
+
+            // Reveal Teaser after flight starts
+            setTimeout(() => {
+                storyCard.classList.add('visible');
+            }, 800);
+        }
+
+        function revealStory() {
+            storyCard.classList.remove('minimized');
+            // Ensure content is visible (might have been hidden by minimized styles)
+        }
+
+        function nextTourStop() {
+            goToTourStop(currentIndex + 1);
+        }
+
+        function endTour() {
+            isTourMode = false;
+            document.body.classList.remove('tour-mode');
+            storyCard.classList.remove('minimized');
+            closeStory();
+
+            // Restore global route
+            if (!map.hasLayer(routeLine)) routeLine.addTo(map);
+            if (tourPolyline) map.removeLayer(tourPolyline);
+
+            // Reset Progress
+            const progressEl = document.getElementById('tour-progress');
+            if (progressEl) progressEl.textContent = '';
+        }
+
+        function animateRoute(from, to) {
+            if (tourPolyline) map.removeLayer(tourPolyline);
+
+            tourPolyline = L.polyline([from, to], {
+                color: '#E5C07B',
+                weight: 4,
+                className: 'active-route-line',
+                lineCap: 'round'
+            }).addTo(map);
+        }
     </script>
 </body>
 </html>
