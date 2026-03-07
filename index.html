@@ -1050,11 +1050,58 @@
                  border-radius: 24px;
             }
         }
+
+        /* --- Sensory Enhancements --- */
+        #snow-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Custom Cursor */
+        * { cursor: none !important; }
+
+        .cursor-dot, .cursor-ring {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+        }
+
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-gold);
+            box-shadow: 0 0 10px var(--accent-gold);
+        }
+
+        .cursor-ring {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(229, 192, 123, 0.5);
+            /* Remove width/height transitions */
+            transition: background-color 0.3s ease;
+        }
+
+        .cursor-ring.hovered {
+            background-color: rgba(229, 192, 123, 0.1);
+            border-color: rgba(229, 192, 123, 0.8);
+            /* Scale using JS to avoid centering issues */
+        }
+
     </style>
 </head>
 <body>
 
     <div id="map"></div>
+    <canvas id="snow-canvas"></canvas>
     
     <div id="toast">Link Copied</div>
     <div id="ui-layer">
@@ -1911,6 +1958,168 @@
                 lineCap: 'round'
             }).addTo(map);
         }
+
+        // --- Sensory Enhancements ---
+
+        // 1. Snowfall Effect
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, snowflakes;
+
+        function initSnow() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            snowflakes = [];
+
+            // Generate snowflakes
+            const count = Math.floor((width * height) / 10000); // Responsive count
+            for (let i = 0; i < count; i++) {
+                snowflakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    r: Math.random() * 2 + 0.5, // radius
+                    d: Math.random() * count,   // density
+                    v: Math.random() * 0.5 + 0.2 // velocity
+                });
+            }
+        }
+
+        function drawSnow() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.beginPath();
+
+            for (let i = 0; i < snowflakes.length; i++) {
+                const p = snowflakes[i];
+                ctx.moveTo(p.x, p.y);
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+            }
+            ctx.fill();
+            updateSnow();
+        }
+
+        function updateSnow() {
+            for (let i = 0; i < snowflakes.length; i++) {
+                const p = snowflakes[i];
+                p.y += p.v;
+                p.x += Math.sin(p.d) * 0.5; // slight sway
+
+                // If it goes off screen, reset to top
+                if (p.y > height) {
+                    p.y = -5;
+                    p.x = Math.random() * width;
+                }
+            }
+        }
+
+        function loopSnow() {
+            drawSnow();
+            requestAnimationFrame(loopSnow);
+        }
+
+        window.addEventListener('resize', initSnow);
+        initSnow();
+        loopSnow();
+
+        // 2. Custom Cursor
+        const cursorDot = document.createElement('div');
+        cursorDot.className = 'cursor-dot';
+        const cursorRing = document.createElement('div');
+        cursorRing.className = 'cursor-ring';
+        document.body.appendChild(cursorDot);
+        document.body.appendChild(cursorRing);
+
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let ringX = mouseX;
+        let ringY = mouseY;
+        let isHovering = false;
+        let currentScale = 1;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            // Dot follows exactly (dot is 8x8, offset by 4)
+            cursorDot.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
+        });
+
+        function loopCursor() {
+            // Ring follows with easing (lerp)
+            ringX += (mouseX - ringX) * 0.2;
+            ringY += (mouseY - ringY) * 0.2;
+
+            // Smoothly interpolate scale for hover state
+            const targetScale = isHovering ? 1.5 : 1;
+            currentScale += (targetScale - currentScale) * 0.2;
+
+            // Ring is 40x40, offset by 20. Apply scale *after* translate.
+            cursorRing.style.transform = `translate(${ringX - 20}px, ${ringY - 20}px) scale(${currentScale})`;
+            requestAnimationFrame(loopCursor);
+        }
+        loopCursor();
+
+        // Hover states for interactive elements
+        const interactiveSelectors = 'a, button, .custom-marker, .filter-chip, .card-handle';
+
+        function attachCursorHoverEvents() {
+            document.querySelectorAll(interactiveSelectors).forEach(el => {
+                // Avoid attaching multiple times if DOM changes, though static here mostly
+                if(!el.dataset.cursorAttached) {
+                    el.addEventListener('mouseenter', () => {
+                        cursorRing.classList.add('hovered');
+                        isHovering = true;
+                    });
+                    el.addEventListener('mouseleave', () => {
+                        cursorRing.classList.remove('hovered');
+                        isHovering = false;
+                    });
+                    el.dataset.cursorAttached = "true";
+                }
+            });
+        }
+
+        // Initial attach
+        attachCursorHoverEvents();
+
+        // Because Leaflet markers are created dynamically, observer needed or re-attach
+        const observer = new MutationObserver((mutations) => {
+            let shouldReattach = false;
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length) shouldReattach = true;
+            });
+            if (shouldReattach) attachCursorHoverEvents();
+        });
+
+        // Observe map pane for dynamic markers
+        observer.observe(document.querySelector('.leaflet-pane.leaflet-marker-pane'), { childList: true, subtree: true });
+
+        // 3. Parallax Hero Image
+        const storyCardEl = document.getElementById('story-card');
+        const heroImgEl = document.getElementById('story-hero-img');
+
+        storyCardEl.addEventListener('mousemove', (e) => {
+            // Only apply if visible
+            if (!storyCardEl.classList.contains('visible') && !storyCardEl.classList.contains('minimized')) return;
+
+            const rect = heroImgEl.getBoundingClientRect();
+            // Calculate mouse position relative to image center
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            // Calculate movement delta (-1 to 1)
+            const deltaX = (e.clientX - centerX) / (rect.width / 2);
+            const deltaY = (e.clientY - centerY) / (rect.height / 2);
+
+            // Apply slight transform (-5px to 5px move, plus a bit of scale to prevent edge clipping)
+            heroImgEl.style.transform = `translate(${deltaX * -10}px, ${deltaY * -10}px) scale(1.05)`;
+        });
+
+        storyCardEl.addEventListener('mouseleave', () => {
+            // Reset
+            heroImgEl.style.transform = `translate(0, 0) scale(1)`;
+        });
+
     </script>
 </body>
 </html>
