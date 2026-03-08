@@ -1540,6 +1540,9 @@
         }
 
         function updateContent(exp, idx) {
+            setSensoryEnvironment(exp);
+            updateWeather(exp);
+
             titleEl.textContent = exp.title;
             descEl.textContent = exp.description;
 
@@ -1582,6 +1585,9 @@
                 endTour();
                 return;
             }
+
+            setSensoryEnvironment(null);
+            updateWeather();
 
             document.body.classList.remove('has-active-story');
             storyCard.classList.remove('visible');
@@ -1746,11 +1752,29 @@
             // Could use this to initialize map markers if needed
         }
 
-        function updateWeather() {
-            const temps = [-5, -3, 0, 2, 5];
-            const conds = ["Mist", "Snow", "Clear", "Cloudy"];
-            const temp = temps[Math.floor(Math.random() * temps.length)];
-            const cond = conds[Math.floor(Math.random() * conds.length)];
+        function updateWeather(exp) {
+            let temp, cond;
+
+            if (exp) {
+                if (exp.category === 'Nature') {
+                    temp = exp.title.includes('Snow') ? '-2' : '15';
+                    cond = exp.title.includes('Cascade') ? 'Mist' : 'Clear';
+                } else if (exp.category === 'Culture') {
+                    temp = '12';
+                    cond = 'Calm';
+                } else if (exp.category === 'Relaxation') {
+                    temp = '18';
+                    cond = 'Breeze';
+                } else {
+                    temp = '5';
+                    cond = 'Clear';
+                }
+            } else {
+                const temps = [-5, -3, 0, 2, 5];
+                const conds = ["Mist", "Snow", "Clear", "Cloudy"];
+                temp = temps[Math.floor(Math.random() * temps.length)];
+                cond = conds[Math.floor(Math.random() * conds.length)];
+            }
 
             document.getElementById('weather-temp').textContent = `${temp}°C`;
             document.getElementById('weather-desc').textContent = cond;
@@ -1965,6 +1989,23 @@
         const canvas = document.getElementById('snow-canvas');
         const ctx = canvas.getContext('2d');
         let width, height, snowflakes;
+        let currentParticleType = 'snow';
+
+        function setSensoryEnvironment(exp) {
+            if (!exp) {
+                currentParticleType = 'snow';
+                return;
+            }
+            if (exp.category === 'Nature' && exp.title.includes('Cascade')) {
+                currentParticleType = 'mist';
+            } else if (exp.category === 'Culture' || exp.category === 'Relaxation') {
+                currentParticleType = 'fireflies';
+            } else if (exp.title.includes('River') || exp.title.includes('Hamta')) {
+                currentParticleType = 'mist';
+            } else {
+                currentParticleType = 'snow';
+            }
+        }
 
         function initSnow() {
             width = canvas.width = window.innerWidth;
@@ -1986,29 +2027,70 @@
 
         function drawSnow() {
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+
+            if (currentParticleType === 'snow') {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+            } else if (currentParticleType === 'mist') {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+            } else if (currentParticleType === 'fireflies') {
+                ctx.fillStyle = "rgba(229, 192, 123, 0.8)"; // Gold
+            }
+
             ctx.beginPath();
 
             for (let i = 0; i < snowflakes.length; i++) {
                 const p = snowflakes[i];
                 ctx.moveTo(p.x, p.y);
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+                if (currentParticleType === 'mist') {
+                     ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2, true);
+                } else if (currentParticleType === 'fireflies') {
+                     ctx.arc(p.x, p.y, p.r * 1.5, 0, Math.PI * 2, true);
+                } else {
+                     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+                }
             }
-            ctx.fill();
+
+            if (currentParticleType === 'fireflies') {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "rgba(229, 192, 123, 0.5)";
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.fill();
+            }
+
             updateSnow();
         }
 
         function updateSnow() {
             for (let i = 0; i < snowflakes.length; i++) {
                 const p = snowflakes[i];
-                p.y += p.v;
-                p.x += Math.sin(p.d) * 0.5; // slight sway
 
-                // If it goes off screen, reset to top
-                if (p.y > height) {
-                    p.y = -5;
-                    p.x = Math.random() * width;
+                if (currentParticleType === 'snow') {
+                    p.y += p.v;
+                    p.x += Math.sin(p.d) * 0.5;
+                    if (p.y > height) {
+                        p.y = -5;
+                        p.x = Math.random() * width;
+                    }
+                } else if (currentParticleType === 'mist') {
+                    p.x += p.v * 0.8;
+                    p.y -= Math.sin(p.d) * 0.2;
+                    if (p.x > width) {
+                        p.x = -5;
+                        p.y = Math.random() * height;
+                    }
+                } else if (currentParticleType === 'fireflies') {
+                    p.y -= p.v * 0.5;
+                    p.x += Math.sin(p.d) * 1.5;
+                    if (p.y < 0) {
+                        p.y = height + 5;
+                        p.x = Math.random() * width;
+                    }
                 }
+
+                // Gradually change d to animate sine waves better
+                p.d += 0.01;
             }
         }
 
@@ -2119,6 +2201,18 @@
             // Reset
             heroImgEl.style.transform = `translate(0, 0) scale(1)`;
         });
+
+        // 4. Cinematic Map Panning
+        function dronePanLoop() {
+            if (document.body.classList.contains('has-active-story')) {
+                // Extremely subtle pan to create a "breathing" or "drone" effect
+                map.panBy([0.3, 0], { animate: false });
+            }
+            requestAnimationFrame(dronePanLoop);
+        }
+
+        // Start drone panning loop
+        requestAnimationFrame(dronePanLoop);
 
     </script>
 </body>
