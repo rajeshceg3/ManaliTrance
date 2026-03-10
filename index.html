@@ -34,6 +34,18 @@
             --accent-gold-light: #F7E0A3;
             --accent-glow: rgba(229, 192, 123, 0.15);
 
+            /* Atmospheric Themes */
+            --time-dawn: #9CA3AF; /* Cool grey/blue */
+            --time-day: #E5C07B;  /* Default gold */
+            --time-sunset: #F87171; /* Warm red/orange */
+            --time-night: #818CF8; /* Deep indigo */
+
+            /* Background Themes */
+            --bg-dawn: #0a0f18;
+            --bg-day: #050507;
+            --bg-sunset: #180a0a;
+            --bg-night: #05050a;
+
             /* Glassmorphism - Ultrathink Polish */
             --glass-bg: rgba(5, 5, 7, 0.6);
             --glass-border: rgba(255, 255, 255, 0.06);
@@ -986,6 +998,17 @@
             color: #000;
         }
 
+        /* Route Animation */
+        .animated-route {
+            animation: dash 30s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
         /* Active Route Animation */
         .active-route-line {
             stroke-dasharray: 1000;
@@ -1465,7 +1488,8 @@
             dashArray: '8, 16',
             weight: 2,
             opacity: 0.4,
-            lineCap: 'round'
+            lineCap: 'round',
+            className: 'animated-route'
         }).addTo(map);
 
         const categoryIcons = {
@@ -1561,9 +1585,37 @@
             updateNavState();
         }
 
+        function applyTimeTheme(bestTime) {
+            const root = document.documentElement;
+            if (!bestTime) {
+                root.style.setProperty('--accent-gold', 'var(--time-day)');
+                root.style.setProperty('--bg-deep', 'var(--bg-day)');
+                return;
+            }
+
+            const lowerTime = bestTime.toLowerCase();
+            if (lowerTime.includes('morning') || lowerTime.includes('dawn')) {
+                root.style.setProperty('--accent-gold', 'var(--time-dawn)');
+                root.style.setProperty('--bg-deep', 'var(--bg-dawn)');
+            } else if (lowerTime.includes('afternoon') || lowerTime.includes('lunch')) {
+                root.style.setProperty('--accent-gold', 'var(--time-day)');
+                root.style.setProperty('--bg-deep', 'var(--bg-day)');
+            } else if (lowerTime.includes('evening') || lowerTime.includes('sunset')) {
+                root.style.setProperty('--accent-gold', 'var(--time-sunset)');
+                root.style.setProperty('--bg-deep', 'var(--bg-sunset)');
+            } else if (lowerTime.includes('night') || lowerTime.includes('midnight')) {
+                root.style.setProperty('--accent-gold', 'var(--time-night)');
+                root.style.setProperty('--bg-deep', 'var(--bg-night)');
+            } else {
+                root.style.setProperty('--accent-gold', 'var(--time-day)');
+                root.style.setProperty('--bg-deep', 'var(--bg-day)');
+            }
+        }
+
         function updateContent(exp, idx) {
             setSensoryEnvironment(exp);
             updateWeather(exp);
+            applyTimeTheme(exp.bestTime);
 
             // Re-trigger stagger animation
             contentWrapper.classList.remove('show-stagger');
@@ -1617,6 +1669,7 @@
 
             setSensoryEnvironment(null);
             updateWeather();
+            applyTimeTheme(null);
 
             document.body.classList.remove('has-active-story');
             storyCard.classList.remove('visible');
@@ -2099,30 +2152,41 @@
         }
 
         function updateSnow() {
+            // Calculate wind based on mouseX relative to center
+            const wind = ((mouseX || (width / 2)) - (width / 2)) / (width / 2); // -1 to 1
+
             for (let i = 0; i < snowflakes.length; i++) {
                 const p = snowflakes[i];
 
                 if (currentParticleType === 'snow') {
                     p.y += p.v;
-                    p.x += Math.sin(p.d) * 0.5;
+                    p.x += Math.sin(p.d) * 0.5 + (wind * 2); // Add wind effect
                     if (p.y > height) {
                         p.y = -5;
                         p.x = Math.random() * width;
                     }
+                    if (p.x > width + 5) p.x = -5;
+                    if (p.x < -5) p.x = width + 5;
                 } else if (currentParticleType === 'mist') {
-                    p.x += p.v * 0.8;
+                    p.x += p.v * 0.8 + (wind * 1.5); // Add wind effect
                     p.y -= Math.sin(p.d) * 0.2;
                     if (p.x > width) {
                         p.x = -5;
                         p.y = Math.random() * height;
                     }
+                    if (p.x < -5) {
+                        p.x = width + 5;
+                        p.y = Math.random() * height;
+                    }
                 } else if (currentParticleType === 'fireflies') {
                     p.y -= p.v * 0.5;
-                    p.x += Math.sin(p.d) * 1.5;
+                    p.x += Math.sin(p.d) * 1.5 + (wind * 0.5); // Subtle wind for fireflies
                     if (p.y < 0) {
                         p.y = height + 5;
                         p.x = Math.random() * width;
                     }
+                    if (p.x > width + 5) p.x = -5;
+                    if (p.x < -5) p.x = width + 5;
                 }
 
                 // Gradually change d to animate sine waves better
@@ -2187,6 +2251,7 @@
                     el.addEventListener('mouseenter', () => {
                         cursorRing.classList.add('hovered');
                         isHovering = true;
+                        playUIHoverSound();
                     });
                     el.addEventListener('mouseleave', () => {
                         cursorRing.classList.remove('hovered');
@@ -2196,21 +2261,6 @@
                 }
             });
         }
-
-        // Initial attach
-        attachCursorHoverEvents();
-
-        // Because Leaflet markers are created dynamically, observer needed or re-attach
-        const observer = new MutationObserver((mutations) => {
-            let shouldReattach = false;
-            mutations.forEach((mutation) => {
-                if (mutation.addedNodes.length) shouldReattach = true;
-            });
-            if (shouldReattach) attachCursorHoverEvents();
-        });
-
-        // Observe map pane for dynamic markers
-        observer.observe(document.querySelector('.leaflet-pane.leaflet-marker-pane'), { childList: true, subtree: true });
 
         // 3. Parallax Hero Image
         const storyCardEl = document.getElementById('story-card');
@@ -2251,9 +2301,9 @@
         requestAnimationFrame(dronePanLoop);
 
         // --- Web Audio API Enhancements ---
-        let audioCtx = null;
-        let currentOscillators = [];
-        let currentGainNodes = [];
+        var audioCtx = null;
+        var currentOscillators = [];
+        var currentGainNodes = [];
 
         function initAudio() {
             if (!audioCtx) {
@@ -2264,13 +2314,54 @@
             }
         }
 
+        function playUIHoverSound() {
+            initAudio();
+            if (audioCtx.state === 'suspended') return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        // Initial attach
+        attachCursorHoverEvents();
+
+        // Because Leaflet markers are created dynamically, observer needed or re-attach
+        const observer = new MutationObserver((mutations) => {
+            let shouldReattach = false;
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length) shouldReattach = true;
+            });
+            if (shouldReattach) attachCursorHoverEvents();
+        });
+
+        // Observe map pane for dynamic markers
+        observer.observe(document.querySelector('.leaflet-pane.leaflet-marker-pane'), { childList: true, subtree: true });
+
         function stopAmbientSound() {
-            currentGainNodes.forEach(gain => {
-                gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
-            });
-            currentOscillators.forEach(osc => {
-                try { osc.stop(audioCtx.currentTime + 0.5); } catch (e) {}
-            });
+            if (currentGainNodes) {
+                currentGainNodes.forEach(gain => {
+                    if (audioCtx) gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+                });
+            }
+            if (currentOscillators) {
+                currentOscillators.forEach(osc => {
+                    try { if (audioCtx) osc.stop(audioCtx.currentTime + 0.5); } catch (e) {}
+                });
+            }
             currentOscillators = [];
             currentGainNodes = [];
         }
