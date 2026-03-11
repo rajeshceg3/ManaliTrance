@@ -207,6 +207,7 @@
             pointer-events: auto;
             max-height: 80vh;
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex; flex-direction: column;
             overscroll-behavior: contain;
         }
@@ -371,6 +372,7 @@
                 border: 1px solid var(--glass-border);
                 padding: 72px 64px;
                 max-height: 85vh;
+                overflow-x: hidden;
                 backdrop-filter: blur(60px) saturate(200%);
                 -webkit-backdrop-filter: blur(60px) saturate(200%);
                 box-shadow: var(--glass-shadow);
@@ -518,6 +520,7 @@
 
         @keyframes pulse-ring {
             0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            70% { transform: translate(-50%, -50%) scale(3.5); opacity: 0.2; }
             100% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
         }
 
@@ -574,6 +577,12 @@
 
         /* --- New Enrichment Styles --- */
 
+        @keyframes kenBurns {
+            0% { transform: scale(1) translate(0, 0); }
+            50% { transform: scale(1.1) translate(-1%, -1%); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+
         .story-card-hero {
             display: block;
             width: calc(100% + 48px);
@@ -586,6 +595,7 @@
             -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
             background-color: #1a1a1a; /* Placeholder color */
             transition: background-image 0.5s ease;
+            animation: kenBurns 20s ease-in-out infinite;
         }
 
         .meta-row {
@@ -2280,12 +2290,12 @@
             const deltaY = (e.clientY - centerY) / (rect.height / 2);
 
             // Apply slight transform (-5px to 5px move, plus a bit of scale to prevent edge clipping)
-            heroImgEl.style.transform = `translate(${deltaX * -10}px, ${deltaY * -10}px) scale(1.05)`;
+            heroImgEl.style.transform = `translate(${deltaX * -10}px, ${deltaY * -10}px) scale(1.05) rotateX(${deltaY * -2}deg) rotateY(${deltaX * 2}deg)`;
         });
 
         storyCardEl.addEventListener('mouseleave', () => {
             // Reset
-            heroImgEl.style.transform = `translate(0, 0) scale(1)`;
+            heroImgEl.style.transform = `translate(0, 0) scale(1) rotateX(0deg) rotateY(0deg)`;
         });
 
         // 4. Cinematic Map Panning
@@ -2354,7 +2364,7 @@
         function stopAmbientSound() {
             if (currentGainNodes) {
                 currentGainNodes.forEach(gain => {
-                    if (audioCtx) gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+                    if (audioCtx) gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
                 });
             }
             if (currentOscillators) {
