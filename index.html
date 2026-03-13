@@ -1572,11 +1572,13 @@
             if (!isFirstLoad && storyCard.classList.contains('visible')) {
                 // Staggered text animation
                 contentWrapper.classList.add('fade-out');
-                setTimeout(() => {
+                if (window.contentUpdateTimeout) clearTimeout(window.contentUpdateTimeout);
+                window.contentUpdateTimeout = setTimeout(() => {
                     updateContent(exp, index);
                     contentWrapper.classList.remove('fade-out');
                 }, 400);
             } else {
+                if (window.contentUpdateTimeout) clearTimeout(window.contentUpdateTimeout);
                 updateContent(exp, index);
                 storyCard.classList.add('visible');
             }
@@ -2161,16 +2163,19 @@
             updateSnow();
         }
 
+        let smoothedWind = 0;
+
         function updateSnow() {
             // Calculate wind based on mouseX relative to center
             const wind = ((mouseX || (width / 2)) - (width / 2)) / (width / 2); // -1 to 1
+            smoothedWind += (wind - smoothedWind) * 0.05;
 
             for (let i = 0; i < snowflakes.length; i++) {
                 const p = snowflakes[i];
 
                 if (currentParticleType === 'snow') {
                     p.y += p.v;
-                    p.x += Math.sin(p.d) * 0.5 + (wind * 2); // Add wind effect
+                    p.x += Math.sin(p.d) * 0.5 + (smoothedWind * 2); // Add wind effect
                     if (p.y > height) {
                         p.y = -5;
                         p.x = Math.random() * width;
@@ -2178,7 +2183,7 @@
                     if (p.x > width + 5) p.x = -5;
                     if (p.x < -5) p.x = width + 5;
                 } else if (currentParticleType === 'mist') {
-                    p.x += p.v * 0.8 + (wind * 1.5); // Add wind effect
+                    p.x += p.v * 0.8 + (smoothedWind * 1.5); // Add wind effect
                     p.y -= Math.sin(p.d) * 0.2;
                     if (p.x > width) {
                         p.x = -5;
@@ -2190,7 +2195,7 @@
                     }
                 } else if (currentParticleType === 'fireflies') {
                     p.y -= p.v * 0.5;
-                    p.x += Math.sin(p.d) * 1.5 + (wind * 0.5); // Subtle wind for fireflies
+                    p.x += Math.sin(p.d) * 1.5 + (smoothedWind * 0.5); // Subtle wind for fireflies
                     if (p.y < 0) {
                         p.y = height + 5;
                         p.x = Math.random() * width;
@@ -2314,6 +2319,7 @@
         var audioCtx = null;
         var currentOscillators = [];
         var currentGainNodes = [];
+        var audioPlayTimeout = null;
 
         function initAudio() {
             if (!audioCtx) {
@@ -2362,9 +2368,18 @@
         observer.observe(document.querySelector('.leaflet-pane.leaflet-marker-pane'), { childList: true, subtree: true });
 
         function stopAmbientSound() {
+            if (audioPlayTimeout) {
+                clearTimeout(audioPlayTimeout);
+                audioPlayTimeout = null;
+            }
             if (currentGainNodes) {
                 currentGainNodes.forEach(gain => {
-                    if (audioCtx) gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    if (audioCtx) {
+                        try {
+                            gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                        } catch(e) {}
+                    }
                 });
             }
             if (currentOscillators) {
@@ -2381,7 +2396,7 @@
             stopAmbientSound();
 
             // Allow time for stop
-            setTimeout(() => {
+            audioPlayTimeout = setTimeout(() => {
                 const masterGain = audioCtx.createGain();
                 masterGain.connect(audioCtx.destination);
                 masterGain.gain.value = 0;
