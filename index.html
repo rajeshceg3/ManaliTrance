@@ -97,6 +97,13 @@
             color: #fff;
         }
 
+
+        #map-tint-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1; mix-blend-mode: overlay;
+            transition: background 1.2s var(--ease-in-out);
+            background: transparent;
+        }
         #map {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
             background: var(--bg-deep);
@@ -1053,6 +1060,18 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        /* Cinematic Idle Mode */
+        .idle-mode #filter-container,
+        .idle-mode #weather-widget,
+        .idle-mode .map-controls,
+        .idle-mode .about-btn,
+        .idle-mode header,
+        .idle-mode #start-btn {
+            opacity: 0 !important;
+            pointer-events: none;
+            transition: opacity 1.5s var(--ease-out-expo);
+        }
+
         /* Tour Specific Button */
         #tour-continue-btn {
             width: 100%;
@@ -1154,6 +1173,7 @@
 <body>
 
     <div id="map"></div>
+    <div id="map-tint-overlay"></div>
     <canvas id="snow-canvas"></canvas>
     
     <div id="toast">Link Copied</div>
@@ -1243,9 +1263,12 @@
                 <h2 id="story-title" class="stagger-item">Experience Title</h2>
                 <p id="story-description" class="stagger-item">Description goes here...</p>
 
-                <div class="audio-cue stagger-item">
+                <div class="audio-cue stagger-item" style="display: flex; align-items: center;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h5l4 8V4L7 12H2z"></path></svg>
                     <span id="story-audio"></span>
+                    <button id="narrate-btn" class="nav-btn" style="width: 32px; height: 32px; margin-left: auto;" onclick="toggleNarration()" aria-label="Narrate Story">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+                    </button>
                 </div>
 
                 <div class="getting-there stagger-item">
@@ -1599,9 +1622,11 @@
 
         function applyTimeTheme(bestTime) {
             const root = document.documentElement;
+            const mapTint = document.getElementById('map-tint-overlay');
             if (!bestTime) {
                 root.style.setProperty('--accent-gold', 'var(--time-day)');
                 root.style.setProperty('--bg-deep', 'var(--bg-day)');
+                if (mapTint) mapTint.style.background = 'transparent';
                 return;
             }
 
@@ -1609,18 +1634,23 @@
             if (lowerTime.includes('morning') || lowerTime.includes('dawn')) {
                 root.style.setProperty('--accent-gold', 'var(--time-dawn)');
                 root.style.setProperty('--bg-deep', 'var(--bg-dawn)');
+                if (mapTint) mapTint.style.background = 'rgba(156, 163, 175, 0.2)';
             } else if (lowerTime.includes('afternoon') || lowerTime.includes('lunch')) {
                 root.style.setProperty('--accent-gold', 'var(--time-day)');
                 root.style.setProperty('--bg-deep', 'var(--bg-day)');
+                if (mapTint) mapTint.style.background = 'transparent';
             } else if (lowerTime.includes('evening') || lowerTime.includes('sunset')) {
                 root.style.setProperty('--accent-gold', 'var(--time-sunset)');
                 root.style.setProperty('--bg-deep', 'var(--bg-sunset)');
+                if (mapTint) mapTint.style.background = 'rgba(248, 113, 113, 0.1)';
             } else if (lowerTime.includes('night') || lowerTime.includes('midnight')) {
                 root.style.setProperty('--accent-gold', 'var(--time-night)');
                 root.style.setProperty('--bg-deep', 'var(--bg-night)');
+                if (mapTint) mapTint.style.background = 'rgba(129, 140, 248, 0.2)';
             } else {
                 root.style.setProperty('--accent-gold', 'var(--time-day)');
                 root.style.setProperty('--bg-deep', 'var(--bg-day)');
+                if (mapTint) mapTint.style.background = 'transparent';
             }
         }
 
@@ -1663,11 +1693,54 @@
             }, 50);
         }
 
+        // --- Ambient Voice Narration ---
+        let isNarrating = false;
+
+        function toggleNarration() {
+            if (!('speechSynthesis' in window)) return;
+
+            if (isNarrating) {
+                window.speechSynthesis.cancel();
+                isNarrating = false;
+                document.getElementById('narrate-btn').style.color = "var(--text-primary)";
+                return;
+            }
+
+            const textToRead = document.getElementById('story-description').textContent;
+            if (!textToRead) return;
+
+            window.speechSynthesis.cancel(); // Clear any existing
+
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+
+            utterance.onend = () => {
+                isNarrating = false;
+                document.getElementById('narrate-btn').style.color = "var(--text-primary)";
+            };
+
+            isNarrating = true;
+            document.getElementById('narrate-btn').style.color = "var(--accent-gold)";
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopNarration() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            isNarrating = false;
+            const btn = document.getElementById('narrate-btn');
+            if (btn) btn.style.color = "var(--text-primary)";
+        }
+
         function navigate(dir) {
+            stopNarration();
             showExperience(currentIndex + dir);
         }
         
         function closeStory() {
+            stopNarration();
             if (isTourMode) {
                 // In tour mode, close button exits the tour or minimizes
                 // Let's make it exit tour for clarity, or minimize if expanded
@@ -2351,6 +2424,40 @@
             osc.start();
             osc.stop(audioCtx.currentTime + 0.05);
         }
+
+        // --- Cinematic Idle Mode ---
+        let idleTimeout;
+        let idlePanInterval;
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimeout);
+            clearInterval(idlePanInterval);
+            document.body.classList.remove('idle-mode');
+
+            idleTimeout = setTimeout(() => {
+                if (!isTourMode && !document.body.classList.contains('has-active-story')) {
+                    document.body.classList.add('idle-mode');
+
+                    // Start cinematic panning
+                    idlePanInterval = setInterval(() => {
+                        const randomExp = experiences[Math.floor(Math.random() * experiences.length)];
+                        map.flyTo(randomExp.coords, 14, {
+                            duration: 10,
+                            animate: true,
+                            easeLinearity: 0.1
+                        });
+                    }, 12000);
+                }
+            }, 30000); // 30 seconds of inactivity
+        }
+
+        // Attach idle timer reset events
+        ['mousemove', 'touchstart', 'keydown', 'click'].forEach(evt => {
+            document.addEventListener(evt, resetIdleTimer);
+        });
+
+        // Start initial idle timer
+        resetIdleTimer();
 
         // Initial attach
         attachCursorHoverEvents();
