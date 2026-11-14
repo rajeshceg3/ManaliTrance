@@ -23,3 +23,5 @@
 #story-card.minimized .tour-teaser-content{top:22px;bottom:auto}
 #story-card.minimized .tour-teaser-title{font-size:26px;margin-bottom:8px}
 .tour-expand-btn{min-height:44px}
+body.tour-mode #explore-manali,body.has-active-story #explore-manali{top:24px}
+@media(max-width:480px){#tour-progress{left:18px;padding:8px 16px;transform:translateY(-100px)}body.tour-mode #tour-progress{transform:translateY(0)}}
