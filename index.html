@@ -1171,6 +1171,7 @@
         }
 
     </style>
+<link rel="stylesheet" href="explore-controls.css">
 </head>
 <body>
 
@@ -1617,6 +1618,7 @@
 
             markers.forEach((m, i) => {
                 const el = m.getElement();
+                if (!el) return;
                 if (i === index) {
                     el.classList.add('active');
                     m.setZIndexOffset(1000);
@@ -1770,7 +1772,7 @@
             storyCard.classList.remove('minimized');
             currentIndex = -1;
             markers.forEach((m) => {
-                m.getElement().classList.remove('active');
+                m.getElement()?.classList.remove('active');
                 m.setZIndexOffset(0);
             });
             if (!isJourneyMode) {
@@ -2110,6 +2112,7 @@
             // Highlight marker
             markers.forEach((m, i) => {
                 const el = m.getElement();
+                if (!el) return;
                 if (i === index) {
                     el.classList.add('active');
                     m.setZIndexOffset(1000);
@@ -2296,6 +2299,9 @@
             requestAnimationFrame(loopSnow);
         }
 
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+
         window.addEventListener('resize', initSnow);
         initSnow();
         loopSnow();
@@ -2308,8 +2314,6 @@
         document.body.appendChild(cursorDot);
         document.body.appendChild(cursorRing);
 
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
         let ringX = mouseX;
         let ringY = mouseY;
         let isHovering = false;
@@ -2584,5 +2588,6 @@
             }, 50);
         }
     </script>
+<script src="explore-controls.js"></script>
 </body>
 </html>
